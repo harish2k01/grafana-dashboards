@@ -97,8 +97,3 @@ Get-ChildItem -Recurse -Filter *.json | ForEach-Object {
   Write-Host "valid $($_.FullName)"
 }
 ```
-
-## License
-
-No license has been specified. Reuse should be treated as restricted unless a
-license is added.
