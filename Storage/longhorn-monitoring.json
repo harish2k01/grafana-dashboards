@@ -32,7 +32,7 @@
       }
     ],
     "cursorSync": "Off",
-    "description": "An example dashboard for Longhorn. Updated by ONZACK AG (Robin Hermann)",
+    "description": "",
     "editable": true,
     "elements": {
       "panel-10": {
@@ -3114,7 +3114,7 @@
       "timezone": "browser",
       "to": "now"
     },
-    "title": "Longhorn Monitoring",
+    "title": "Longhorn",
     "variables": [
       {
         "kind": "DatasourceVariable",
