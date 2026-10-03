@@ -74,6 +74,34 @@ for ConfigMap-based dashboard provisioning.
 
 ## Maintenance
 
+### Operations dashboards
+
+Three dashboards are provided for the existing kube-prometheus-stack metrics:
+
+- `Infra/homelab-overview.json`: node readiness, pod health, resource demand,
+  PVC usage, node pressure and scrape availability.
+- `Applications/workload-reliability.json`: waiting reasons, restarts, last OOM
+  termination, resource demand, CPU throttling and deployment replica shortfalls.
+- `Infra/prometheus-health.json`: discovered targets, scrape duration, ingestion,
+  active series, rule failures, missed iterations and notification errors.
+
+These classic dashboard JSON files use stable UIDs and the existing Git Sync
+folders. Select a Prometheus datasource; its default UID is `prometheus`.
+Namespace filters apply to workload panels; infrastructure and target panels
+remain global. Intended for one cluster per datasource. No additional exporters,
+custom recording rules, Vault or External Secrets are required.
+
+Missing telemetry displays `No data`. OOM panels show the last termination reason,
+not an OOM event count. Target coverage only includes discovered targets.
+Prometheus notification errors cover delivery to Alertmanager, not downstream
+channels. Validate panels against live metrics after Git Sync imports them.
+
+Regenerate these three files after editing their source:
+
+```powershell
+node scripts/build-operations-dashboards.mjs
+```
+
 Dashboard changes should be made through pull requests when possible. This
 makes dashboard JSON diffs reviewable and keeps accidental UI changes from
 silently replacing known-good dashboards.
