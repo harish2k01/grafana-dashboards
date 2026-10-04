@@ -82,9 +82,10 @@ SMART status, telemetry availability, temperature, power-on time, SATA sector
 attributes, disk inventory and NVMe health panels. Datasource UID defaults to
 `prometheus`, matching the operations dashboards.
 
-Current collection covers the physical SATA SSDs on hermes and athena. QEMU
-disks on zeus and apollo require physical SMART monitoring on Proxmox. Longhorn
-iSCSI volumes are excluded. NVMe panels display No data for SATA disks; vendor
+Collection automatically follows nodes classified as bare metal by Node Feature
+Discovery and discovers their ATA/NVMe disks without hostname or device lists.
+Current physical SATA SSDs are on hermes and athena. QEMU disks on zeus and apollo
+require physical SMART monitoring on Proxmox. Longhorn iSCSI volumes are excluded. NVMe panels display No data for SATA disks; vendor
 wear attributes are not converted into generic remaining-life percentages.
 Missing metrics are unavailable telemetry. Validate live panels after Git Sync.
 
