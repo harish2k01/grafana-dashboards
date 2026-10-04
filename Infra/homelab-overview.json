@@ -42,6 +42,14 @@
       "targetBlank": false,
       "includeVars": true,
       "keepTime": true
+    },
+    {
+      "title": "SSD Health",
+      "url": "/d/ssd-health",
+      "type": "link",
+      "targetBlank": false,
+      "includeVars": true,
+      "keepTime": true
     }
   ],
   "annotations": {

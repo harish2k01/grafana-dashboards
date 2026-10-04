@@ -74,6 +74,20 @@ for ConfigMap-based dashboard provisioning.
 
 ## Maintenance
 
+### SSD health
+
+`Infra/ssd-health.json` uses smartctl_exporter metrics collected by the
+`homelab-ops` SMART monitoring application. It provides node/device filters,
+SMART status, telemetry availability, temperature, power-on time, SATA sector
+attributes, disk inventory and NVMe health panels. Datasource UID defaults to
+`prometheus`, matching the operations dashboards.
+
+Current collection covers the physical SATA SSDs on hermes and athena. QEMU
+disks on zeus and apollo require physical SMART monitoring on Proxmox. Longhorn
+iSCSI volumes are excluded. NVMe panels display No data for SATA disks; vendor
+wear attributes are not converted into generic remaining-life percentages.
+Missing metrics are unavailable telemetry. Validate live panels after Git Sync.
+
 ### Operations dashboards
 
 Three dashboards are provided for the existing kube-prometheus-stack metrics:
