@@ -76,26 +76,26 @@ for ConfigMap-based dashboard provisioning.
 
 ### SSD health
 
-The SMART / Health information table presents one row per field and one column
-per selected disk, similar to `smartctl` output. Missing or unexported values
-display Unavailable, never zero. NVMe data units and decimal TB are derived from
-exported byte counters. The v0.14.0 exporter does not expose host command counts,
-controller busy time, temperature durations or individual NVMe sensor readings;
-those rows stay unavailable. SATA vendor raw attributes remain separate from
-NVMe endurance percentage.
+`Infra/ssd-health.json` automatically repeats a section for each selected
+node/disk pair. Filters discover pairs from live inventory, so identical device
+names on different hosts stay separate and new disks need no dashboard edits.
 
-`Infra/ssd-health.json` uses smartctl_exporter metrics collected by the
-`homelab-ops` SMART monitoring application. It provides node/device filters,
-SMART status, telemetry availability, temperature, power-on time, SATA sector
-attributes, disk inventory and NVMe health panels. Datasource UID defaults to
-`prometheus`, matching the operations dashboards.
+Each section focuses on SMART health, temperature, power-on hours, report
+freshness, disk identity, supported wear/lifetime readings, temperature and
+error trends, and selected SATA health attributes (raw, normalized, worst and
+threshold). Unsupported readings are omitted rather than filled with zero.
+SATA vendor values are not interpreted as universal remaining-life percentages.
+NVMe health/spare/endurance readings appear in the health table when reported.
 
-Collection automatically follows nodes classified as bare metal by Node Feature
-Discovery and discovers their ATA/NVMe disks without hostname or device lists.
-Current physical SATA SSDs are on hermes and athena. QEMU disks on zeus and apollo
-require physical SMART monitoring on Proxmox. Longhorn iSCSI volumes are excluded. NVMe panels display No data for SATA disks; vendor
-wear attributes are not converted into generic remaining-life percentages.
-Missing metrics are unavailable telemetry. Validate live panels after Git Sync.
+The homelab-ops extended collector retains complete read-only smartctl reports
+for troubleshooting; exhaustive report fields and text are not displayed in
+this overview. It must roll out before report freshness and supplemental
+readings populate. Datasource UID defaults to `prometheus`. Verify repeated
+sections and tables in live Grafana after Git Sync.
+
+Collection follows NFD-classified bare-metal hosts and discovers ATA/NVMe disks.
+VM hosts and Longhorn iSCSI volumes are excluded. Physical VM backing SSDs need
+monitoring on Proxmox. Missing telemetry remains unavailable, not healthy.
 
 ### Operations dashboards
 

@@ -2,7 +2,7 @@
   "id": null,
   "uid": "ssd-health",
   "title": "Homelab / SSD Health",
-  "description": "Physical disk SMART health from smartctl_exporter. Virtual disks and Longhorn volumes are excluded.",
+  "description": "Automatically repeated node/disk health sections with essential SMART, wear, lifetime and error readings.",
   "tags": [
     "homelab",
     "storage",
@@ -121,6 +121,26 @@
         },
         "refresh": 1,
         "sort": 1
+      },
+      {
+        "name": "disk_pair",
+        "label": "Node / disk sections",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${datasource}"
+        },
+        "query": "query_result(label_join(smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}, \"disk_pair\", \" / \", \"node\", \"device\"))",
+        "definition": "query_result(label_join(smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}, \"disk_pair\", \" / \", \"node\", \"device\"))",
+        "regex": "/disk_pair=\"([^\"]+)\"/",
+        "multi": true,
+        "includeAll": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        },
+        "refresh": 1,
+        "sort": 1
       }
     ]
   },
@@ -133,18 +153,31 @@
         "x": 0,
         "y": 0,
         "w": 24,
-        "h": 4
+        "h": 3
       },
       "options": {
         "mode": "markdown",
-        "content": "Node Feature Discovery automatically classifies hosts. SMART collection runs only on nodes with **hypervisor: none**, and automatically discovers physical **ATA/NVMe** disk identifiers every 5 minutes. VM hosts and Longhorn iSCSI volumes are excluded. Monitor VM backing SSDs on Proxmox. **No data means unavailable telemetry, not healthy.** NVMe panels are empty for SATA drives. SATA wear attributes vary by vendor and are not converted into a generic life percentage."
+        "content": "Each section repeats for one **node / physical disk** pair. This view focuses on health, temperature, wear, lifetime usage and errors. Only reported values are shown; **missing telemetry is not a healthy result**. Full read-only SMART reports remain available for troubleshooting. VM hosts and Longhorn iSCSI volumes are excluded."
       }
     },
     {
-      "id": 15,
-      "title": "SMART / Health information",
-      "description": "Latest SMART values by disk, similar to smartctl output. Decimal TB = bytes / 10^12. NVMe data units = bytes / 512000. Unavailable means not applicable, not reported, or not exposed by exporter v0.14.0; it never means zero. Host command counts, controller busy time, composite temperature durations and individual NVMe sensors are not exposed by this exporter. SATA life-left is a vendor raw attribute, not a universal percentage.",
-      "type": "table",
+      "id": 19,
+      "type": "row",
+      "title": "$disk_pair",
+      "repeat": "disk_pair",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "title": "SMART overall health",
+      "type": "stat",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -152,69 +185,343 @@
       "gridPos": {
         "x": 0,
         "y": 4,
-        "w": 24,
-        "h": 16
+        "w": 6,
+        "h": 5
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "label_join((label_replace((max by(node,device) (smartctl_device_smart_status{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"SMART passed (1=yes, 0=no)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_critical_warning{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Critical warning (numeric bitmask)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_temperature{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",temperature_type=\"current\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Temperature (C)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_available_spare{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Available spare (%)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_available_spare_threshold{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Available spare threshold (%)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_percentage_used{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"NVMe percentage used (%)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_bytes_read{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 512000) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Data units read (NVMe)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_bytes_written{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 512000) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Data units written (NVMe)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_bytes_read{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 1e12) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Data read (TB, NVMe)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_bytes_written{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 1e12) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Data written (TB, NVMe)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0)), \"health_field\", \"Host read commands\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0)), \"health_field\", \"Host write commands\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0)), \"health_field\", \"Controller busy time (minutes)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_power_cycle_count{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Power cycles\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_power_on_seconds{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 3600) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Power-on hours\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\",attribute_name=~\"Unsafe_Shutdown_Count|Unexpect_Power_Loss_Ct\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Unsafe shutdowns / unexpected power losses (SATA)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_media_errors{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Media and data integrity errors (NVMe)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_num_err_log_entries{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Error information log entries (NVMe)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0)), \"health_field\", \"Warning composite temperature time (minutes)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0)), \"health_field\", \"Critical composite temperature time (minutes)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0)), \"health_field\", \"Temperature sensor 1 (C)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\",attribute_name=\"SSD_Life_Left\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"SATA SSD_Life_Left (vendor raw value)\", \"device\", \".*\")), \"disk\", \" / \", \"node\", \"device\")",
+          "expr": "label_join((smartctl_device_smart_status{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"disk_pair\", \" / \", \"node\", \"device\") and on(disk_pair) label_replace(vector(1), \"disk_pair\", \"${disk_pair:raw}\", \"\", \"\")",
           "instant": true,
-          "format": "table"
-        }
-      ],
-      "transformations": [
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "include": {
-              "names": [
-                "health_field",
-                "disk",
-                "Value"
-              ]
-            }
-          }
-        },
-        {
-          "id": "groupingToMatrix",
-          "options": {
-            "columnField": "disk",
-            "rowField": "health_field",
-            "valueField": "Value",
-            "emptyValue": "null"
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "renameByName": {
-              "health_field\\disk": "SMART / Health field",
-              "health_field": "SMART / Health field"
-            }
-          }
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{device}}"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "locale",
-          "decimals": 2,
+          "unit": "short",
           "noValue": "Unavailable",
           "color": {
-            "mode": "fixed",
-            "fixedColor": "blue"
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
           },
           "mappings": [
             {
               "type": "special",
               "options": {
-                "match": "nan",
+                "match": "null",
                 "result": {
                   "text": "Unavailable",
                   "color": "gray"
                 }
               }
             },
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "Failed",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "Passed",
+                  "color": "green"
+                }
+              }
+            }
+          ],
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 21,
+      "title": "Temperature",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 4,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_join((smartctl_device_temperature{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",temperature_type=\"current\"}), \"disk_pair\", \" / \", \"node\", \"device\") and on(disk_pair) label_replace(vector(1), \"disk_pair\", \"${disk_pair:raw}\", \"\", \"\")",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{device}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 70
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "description": "Initial display thresholds; tune to vendor ratings. Alert is above 60 C for 15 minutes."
+    },
+    {
+      "id": 22,
+      "title": "Power-on time",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 4,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_join((smartctl_device_power_on_seconds{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 3600), \"disk_pair\", \" / \", \"node\", \"device\") and on(disk_pair) label_replace(vector(1), \"disk_pair\", \"${disk_pair:raw}\", \"\", \"\")",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{device}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "suffix: hours",
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "none",
+        "graphMode": "none",
+        "textMode": "auto"
+      }
+    },
+    {
+      "id": 23,
+      "title": "Report freshness",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 4,
+        "w": 6,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_join((time() - smartctl_extended_collection_timestamp_seconds{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"disk_pair\", \" / \", \"node\", \"device\") and on(disk_pair) label_replace(vector(1), \"disk_pair\", \"${disk_pair:raw}\", \"\", \"\")",
+          "instant": true,
+          "range": false,
+          "format": "time_series",
+          "legendFormat": "{{device}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 600
+              },
+              {
+                "color": "red",
+                "value": 900
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "description": "Age of the last successful full SMART report. Stale and failed collection have dedicated alerts."
+    },
+    {
+      "id": 24,
+      "title": "Disk identity",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 24,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_join((smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"disk_pair\", \" / \", \"node\", \"device\") and on(disk_pair) label_replace(vector(1), \"disk_pair\", \"${disk_pair:raw}\", \"\", \"\")",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": "{{device}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
             {
               "type": "special",
               "options": {
@@ -239,755 +546,6 @@
       "options": {
         "showHeader": true,
         "cellHeight": "sm"
-      }
-    },
-    {
-      "id": 2,
-      "title": "Exporter reachable",
-      "description": "Exporter availability is separate from SMART availability.",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 20,
-        "w": 8,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "up{namespace=\"monitoring\",job=~\".*smartctl.*\",node=~\"$node\"}",
-          "legendFormat": "{{node}}",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "No data",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "Down",
-                  "color": "red"
-                },
-                "1": {
-                  "text": "Up",
-                  "color": "green"
-                }
-              }
-            },
-            {
-              "type": "special",
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "No data",
-                  "color": "gray"
-                }
-              }
-            }
-          ]
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      }
-    },
-    {
-      "id": 3,
-      "title": "SMART overall health",
-      "description": "Passed does not guarantee the absence of defects.",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 8,
-        "y": 20,
-        "w": 8,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "smartctl_device_smart_status{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}",
-          "legendFormat": "{{node}} / {{device}}",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "No data",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "value",
-              "options": {
-                "0": {
-                  "text": "Failed",
-                  "color": "red"
-                },
-                "1": {
-                  "text": "Passed",
-                  "color": "green"
-                }
-              }
-            },
-            {
-              "type": "special",
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "No data",
-                  "color": "gray"
-                }
-              }
-            }
-          ]
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      }
-    },
-    {
-      "id": 4,
-      "title": "SMART status available",
-      "description": "Number of disks reporting SMART status on each node. At least one is available; zero means telemetry is missing.",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 16,
-        "y": 20,
-        "w": 8,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "count by(node) (smartctl_device_smart_status{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node) (0 * up{namespace=\"monitoring\",job=~\".*smartctl.*\",node=~\"$node\"})",
-          "legendFormat": "{{node}}",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "No data",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "special",
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "No data",
-                  "color": "gray"
-                }
-              }
-            }
-          ],
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      }
-    },
-    {
-      "id": 5,
-      "title": "SSD temperature",
-      "description": "Alert starts at >60 C for 15 minutes; tune to vendor specification.",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 28,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "smartctl_device_temperature{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",temperature_type=\"current\"}",
-          "legendFormat": "{{node}} / {{device}}",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "celsius",
-          "noValue": "No data",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 6,
-      "title": "Power-on time (days)",
-      "description": "Lifetime powered-on time in days. Age is informational; colour does not indicate health.",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 28,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "(smartctl_device_power_on_seconds{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) / 86400",
-          "legendFormat": "{{node}} / {{device}}",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "suffix: days",
-          "noValue": "No data",
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "blue"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "decimals": 0
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "none",
-        "graphMode": "none",
-        "textMode": "auto"
-      }
-    },
-    {
-      "id": 7,
-      "title": "SATA reallocated sectors",
-      "description": "Raw SMART attribute 5. Confirm vendor interpretation.",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 36,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\",attribute_id=\"5\"}",
-          "legendFormat": "{{node}} / {{device}}",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "No data",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 8,
-      "title": "SATA pending / uncorrectable sectors",
-      "description": "Raw attributes 197 and 198.",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 36,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\",attribute_id=~\"197|198\"}",
-          "legendFormat": "{{node}} / {{device}} / {{attribute_name}}",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "No data",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 9,
-      "title": "NVMe endurance consumed",
-      "description": "NVMe only. 100% is the estimated rated endurance consumed; may exceed 100%.",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 44,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "smartctl_device_percentage_used{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}",
-          "legendFormat": "{{node}} / {{device}}",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "noValue": "No data",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 10,
-      "title": "NVMe available spare",
-      "description": "NVMe only. Compare with vendor threshold.",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 44,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "smartctl_device_available_spare{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}",
-          "legendFormat": "{{node}} / {{device}}",
-          "instant": false,
-          "range": true
-        },
-        {
-          "refId": "B",
-          "expr": "smartctl_device_available_spare_threshold{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}",
-          "legendFormat": "{{node}} / {{device}} threshold",
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "percent",
-          "noValue": "No data",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 11,
-      "title": "NVMe critical warning",
-      "description": "NVMe warning bitmask; any nonzero value needs investigation.",
-      "type": "stat",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 52,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "smartctl_device_critical_warning{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}",
-          "legendFormat": "{{node}} / {{device}}",
-          "instant": true,
-          "range": false
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "No data",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 1
-              }
-            ]
-          },
-          "mappings": [
-            {
-              "type": "special",
-              "options": {
-                "match": "null",
-                "result": {
-                  "text": "No data",
-                  "color": "gray"
-                }
-              }
-            }
-          ]
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto"
-      }
-    },
-    {
-      "id": 12,
-      "title": "NVMe media errors",
-      "description": "Lifetime unrecovered data integrity errors. NVMe only.",
-      "type": "timeseries",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 12,
-        "y": 52,
-        "w": 12,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "smartctl_device_media_errors{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}",
-          "legendFormat": "{{node}} / {{device}}",
-          "instant": false,
-          "range": true
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "No data",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        },
-        "tooltip": {
-          "mode": "multi"
-        }
-      }
-    },
-    {
-      "id": 13,
-      "title": "Disk inventory",
-      "description": "Model, serial, firmware and protocol reported by the device.",
-      "type": "table",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${datasource}"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 60,
-        "w": 24,
-        "h": 8
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}",
-          "instant": true,
-          "format": "table"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "unit": "short",
-          "noValue": "No data",
-          "color": {
-            "mode": "palette-classic"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          },
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "filterable": true
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "sortBy": [
-          {
-            "displayName": "Node",
-            "desc": false
-          }
-        ]
       },
       "transformations": [
         {
@@ -995,8 +553,6 @@
           "options": {
             "include": {
               "names": [
-                "node",
-                "device",
                 "model_name",
                 "serial_number",
                 "firmware_version",
@@ -1009,18 +565,7 @@
         {
           "id": "organize",
           "options": {
-            "indexByName": {
-              "node": 0,
-              "device": 1,
-              "model_name": 2,
-              "serial_number": 3,
-              "firmware_version": 4,
-              "protocol": 5,
-              "form_factor": 6
-            },
             "renameByName": {
-              "node": "Node",
-              "device": "Disk",
               "model_name": "Model",
               "serial_number": "Serial",
               "firmware_version": "Firmware",
@@ -1032,9 +577,8 @@
       ]
     },
     {
-      "id": 14,
-      "title": "SATA raw SMART attributes",
-      "description": "Device-reported raw values. Meanings and units are vendor-specific; unknown or packed values are not interpreted as generic error counts or life percentages.",
+      "id": 25,
+      "title": "Health and lifetime readings",
       "type": "table",
       "datasource": {
         "type": "prometheus",
@@ -1042,22 +586,22 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 68,
+        "y": 14,
         "w": 24,
         "h": 10
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\"}",
+          "expr": "label_join((label_replace(max by(node,device) (smartctl_device_capacity_bytes{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 1e9), \"reading\", \"Capacity (GB)\", \"device\", \".*\") or label_replace(max by(node,device) (smartctl_device_power_cycle_count{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"reading\", \"Power cycles\", \"device\", \".*\") or label_replace(max by(node,device) ((smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\",attribute_name=~\"Unsafe_Shutdown_Count|Unexpect_Power_Loss_Ct\"} or smartctl_extended_value{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",section=\"nvme_smart_health_information_log\",field=\"unsafe_shutdowns\"})), \"reading\", \"Unexpected power losses / unsafe shutdowns\", \"device\", \".*\") or label_replace(max by(node,device) (smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\",attribute_name=\"SSD_Life_Left\"}), \"reading\", \"SATA reported life left (vendor raw value)\", \"device\", \".*\") or label_replace(max by(node,device) (smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\",attribute_name=~\"Wear_Leveling_Count|Average_Erase_Count\"}), \"reading\", \"SATA wear / erase count (vendor raw value)\", \"device\", \".*\") or label_replace(max by(node,device) ((smartctl_device_bytes_read{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 1099511627776 or smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\",attribute_name=\"Lifetime_Reads_GiB\"} / 1024)), \"reading\", \"Lifetime read (TiB)\", \"device\", \".*\") or label_replace(max by(node,device) ((smartctl_device_bytes_written{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 1099511627776 or smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\",attribute_name=\"Lifetime_Writes_GiB\"} / 1024)), \"reading\", \"Lifetime written (TiB)\", \"device\", \".*\") or label_replace(max by(node,device) (smartctl_device_percentage_used{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"reading\", \"NVMe rated endurance consumed (%)\", \"device\", \".*\") or label_replace(max by(node,device) (smartctl_device_available_spare{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"reading\", \"NVMe available spare (%)\", \"device\", \".*\") or label_replace(max by(node,device) (smartctl_device_available_spare_threshold{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"reading\", \"NVMe spare threshold (%)\", \"device\", \".*\") or label_replace(max by(node,device) (smartctl_device_critical_warning{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"reading\", \"NVMe critical warning (bitmask)\", \"device\", \".*\") or label_replace(max by(node,device) (smartctl_device_media_errors{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"reading\", \"NVMe media / integrity errors\", \"device\", \".*\") or label_replace(max by(node,device) (smartctl_device_num_err_log_entries{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"reading\", \"NVMe error log entries\", \"device\", \".*\") or label_replace(max by(node,device) (smartctl_device_error_log_count{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"reading\", \"SMART error log entries\", \"device\", \".*\") or label_replace(max by(node,device) (smartctl_device_self_test_log_error_count{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"reading\", \"Reported self-test failures\", \"device\", \".*\")), \"disk_pair\", \" / \", \"node\", \"device\") and on(disk_pair) label_replace(vector(1), \"disk_pair\", \"${disk_pair:raw}\", \"\", \"\")",
           "instant": true,
           "format": "table"
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "short",
-          "noValue": "No data",
+          "unit": "locale",
+          "noValue": "Unavailable",
           "color": {
             "mode": "palette-classic"
           },
@@ -1070,6 +614,18 @@
               }
             ]
           },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
           "custom": {
             "align": "auto",
             "cellOptions": {
@@ -1077,30 +633,22 @@
             },
             "filterable": true
           },
-          "decimals": 0
+          "decimals": 2
         },
         "overrides": []
       },
       "options": {
         "showHeader": true,
-        "cellHeight": "sm",
-        "sortBy": [
-          {
-            "displayName": "Node",
-            "desc": false
-          }
-        ]
+        "cellHeight": "sm"
       },
+      "description": "Only supported readings relevant to disk health. Lifetime transfer conversion uses known byte/GiB counters; unknown vendor units are not guessed. SATA wear/life values keep their vendor meaning. Missing readings are omitted, never filled with zero.",
       "transformations": [
         {
           "id": "filterFieldsByName",
           "options": {
             "include": {
               "names": [
-                "node",
-                "device",
-                "attribute_id",
-                "attribute_name",
+                "reading",
                 "Value"
               ]
             }
@@ -1109,23 +657,249 @@
         {
           "id": "organize",
           "options": {
-            "indexByName": {
-              "node": 0,
-              "device": 1,
-              "attribute_id": 2,
-              "attribute_name": 3,
-              "Value": 4
-            },
             "renameByName": {
-              "node": "Node",
-              "device": "Disk",
-              "attribute_id": "Attribute ID",
-              "attribute_name": "Attribute",
-              "Value": "Raw value"
+              "reading": "Reading (unit)",
+              "Value": "Value"
             }
           }
         }
       ]
+    },
+    {
+      "id": 26,
+      "title": "Temperature history",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_join((smartctl_device_temperature{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}), \"disk_pair\", \" / \", \"node\", \"device\") and on(disk_pair) label_replace(vector(1), \"disk_pair\", \"${disk_pair:raw}\", \"\", \"\")",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "{{temperature_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "celsius",
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 27,
+      "title": "Reported defect/error counters",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_join((smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\",attribute_id=~\"5|171|172|181|182|183|184|187|188|196|197|198|199|218\"}), \"disk_pair\", \" / \", \"node\", \"device\") and on(disk_pair) label_replace(vector(1), \"disk_pair\", \"${disk_pair:raw}\", \"\", \"\")",
+          "instant": false,
+          "range": true,
+          "format": "time_series",
+          "legendFormat": "{{attribute_id}} / {{attribute_name}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      },
+      "description": "Raw SATA diagnostic attributes as reported, including communication errors. Values are vendor-specific and may be packed; inspect full attributes before interpreting them as counts."
+    },
+    {
+      "id": 28,
+      "title": "SATA health attributes",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_join((label_join(smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_id=~\"5|171|172|173|181|182|183|184|187|188|196|197|198|199|218|231|244|245|246\"}, \"attribute\", \" / \", \"attribute_id\", \"attribute_name\", \"attribute_flags_short\")), \"disk_pair\", \" / \", \"node\", \"device\") and on(disk_pair) label_replace(vector(1), \"disk_pair\", \"${disk_pair:raw}\", \"\", \"\")",
+          "instant": true,
+          "range": false,
+          "format": "table",
+          "legendFormat": "{{device}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "attribute",
+                "attribute_value_type",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "rowField": "attribute",
+            "columnField": "attribute_value_type",
+            "valueField": "Value",
+            "emptyValue": "null"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "attribute\\attribute_value_type": "ID / attribute / flags",
+              "raw": "Raw",
+              "value": "Normalized",
+              "worst": "Worst",
+              "thresh": "Threshold"
+            }
+          }
+        }
+      ],
+      "description": "Selected wear, media-integrity and interface-error attributes with raw, normalized, worst and vendor threshold values. Raw values may be packed/vendor-specific; their size alone does not establish failure."
     }
   ]
 }
