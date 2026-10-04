@@ -141,6 +141,107 @@
       }
     },
     {
+      "id": 15,
+      "title": "SMART / Health information",
+      "description": "Latest SMART values by disk, similar to smartctl output. Decimal TB = bytes / 10^12. NVMe data units = bytes / 512000. Unavailable means not applicable, not reported, or not exposed by exporter v0.14.0; it never means zero. Host command counts, controller busy time, composite temperature durations and individual NVMe sensors are not exposed by this exporter. SATA life-left is a vendor raw attribute, not a universal percentage.",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "label_join((label_replace((max by(node,device) (smartctl_device_smart_status{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"SMART passed (1=yes, 0=no)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_critical_warning{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Critical warning (numeric bitmask)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_temperature{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",temperature_type=\"current\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Temperature (C)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_available_spare{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Available spare (%)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_available_spare_threshold{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Available spare threshold (%)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_percentage_used{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"NVMe percentage used (%)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_bytes_read{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 512000) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Data units read (NVMe)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_bytes_written{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 512000) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Data units written (NVMe)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_bytes_read{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 1e12) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Data read (TB, NVMe)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_bytes_written{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 1e12) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Data written (TB, NVMe)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0)), \"health_field\", \"Host read commands\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0)), \"health_field\", \"Host write commands\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0)), \"health_field\", \"Controller busy time (minutes)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_power_cycle_count{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Power cycles\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_power_on_seconds{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"} / 3600) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Power-on hours\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\",attribute_name=~\"Unsafe_Shutdown_Count|Unexpect_Power_Loss_Ct\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Unsafe shutdowns / unexpected power losses (SATA)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_media_errors{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Media and data integrity errors (NVMe)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_num_err_log_entries{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"Error information log entries (NVMe)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0)), \"health_field\", \"Warning composite temperature time (minutes)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0)), \"health_field\", \"Critical composite temperature time (minutes)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0)), \"health_field\", \"Temperature sensor 1 (C)\", \"device\", \".*\") or label_replace((max by(node,device) (smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\",attribute_name=\"SSD_Life_Left\"}) or on(node,device) (max by(node,device) (smartctl_device{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) * (0/0))), \"health_field\", \"SATA SSD_Life_Left (vendor raw value)\", \"device\", \".*\")), \"disk\", \" / \", \"node\", \"device\")",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "health_field",
+                "disk",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "groupingToMatrix",
+          "options": {
+            "columnField": "disk",
+            "rowField": "health_field",
+            "valueField": "Value",
+            "emptyValue": "null"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "health_field\\disk": "SMART / Health field",
+              "health_field": "SMART / Health field"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "locale",
+          "decimals": 2,
+          "noValue": "Unavailable",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "Unavailable",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
       "id": 2,
       "title": "Exporter reachable",
       "description": "Exporter availability is separate from SMART availability.",
@@ -151,7 +252,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 4,
+        "y": 20,
         "w": 8,
         "h": 8
       },
@@ -169,7 +270,7 @@
           "unit": "short",
           "noValue": "No data",
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "thresholds": {
             "mode": "absolute",
@@ -191,6 +292,16 @@
                 "1": {
                   "text": "Up",
                   "color": "green"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "gray"
                 }
               }
             }
@@ -222,7 +333,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 4,
+        "y": 20,
         "w": 8,
         "h": 8
       },
@@ -240,7 +351,7 @@
           "unit": "short",
           "noValue": "No data",
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "thresholds": {
             "mode": "absolute",
@@ -264,6 +375,16 @@
                   "color": "green"
                 }
               }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "gray"
+                }
+              }
             }
           ]
         },
@@ -285,7 +406,7 @@
     {
       "id": 4,
       "title": "SMART status available",
-      "description": "Zero means no status was returned; a missing exporter remains No data.",
+      "description": "Number of disks reporting SMART status on each node. At least one is available; zero means telemetry is missing.",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -293,7 +414,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 4,
+        "y": 20,
         "w": 8,
         "h": 8
       },
@@ -311,7 +432,7 @@
           "unit": "short",
           "noValue": "No data",
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "thresholds": {
             "mode": "absolute",
@@ -325,7 +446,20 @@
                 "value": 1
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "decimals": 0
         },
         "overrides": []
       },
@@ -353,7 +487,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 28,
         "w": 12,
         "h": 8
       },
@@ -397,8 +531,8 @@
     },
     {
       "id": 6,
-      "title": "Power-on time",
-      "description": "Accumulated lifetime powered on.",
+      "title": "Power-on time (days)",
+      "description": "Lifetime powered-on time in days. Age is informational; colour does not indicate health.",
       "type": "stat",
       "datasource": {
         "type": "prometheus",
@@ -406,14 +540,14 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 12,
+        "y": 28,
         "w": 12,
         "h": 8
       },
       "targets": [
         {
           "refId": "A",
-          "expr": "smartctl_device_power_on_seconds{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}",
+          "expr": "(smartctl_device_power_on_seconds{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\"}) / 86400",
           "legendFormat": "{{node}} / {{device}}",
           "instant": true,
           "range": false
@@ -421,10 +555,11 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "suffix: days",
           "noValue": "No data",
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed",
+            "fixedColor": "blue"
           },
           "thresholds": {
             "mode": "absolute",
@@ -434,7 +569,8 @@
                 "value": null
               }
             ]
-          }
+          },
+          "decimals": 0
         },
         "overrides": []
       },
@@ -446,7 +582,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "value",
+        "colorMode": "none",
         "graphMode": "none",
         "textMode": "auto"
       }
@@ -462,7 +598,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 36,
         "w": 12,
         "h": 8
       },
@@ -515,7 +651,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 20,
+        "y": 36,
         "w": 12,
         "h": 8
       },
@@ -568,7 +704,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 28,
+        "y": 44,
         "w": 12,
         "h": 8
       },
@@ -621,7 +757,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 28,
+        "y": 44,
         "w": 12,
         "h": 8
       },
@@ -680,7 +816,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 36,
+        "y": 52,
         "w": 12,
         "h": 8
       },
@@ -698,7 +834,7 @@
           "unit": "short",
           "noValue": "No data",
           "color": {
-            "mode": "palette-classic"
+            "mode": "thresholds"
           },
           "thresholds": {
             "mode": "absolute",
@@ -706,9 +842,25 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
               }
             ]
-          }
+          },
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "No data",
+                  "color": "gray"
+                }
+              }
+            }
+          ]
         },
         "overrides": []
       },
@@ -736,7 +888,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 36,
+        "y": 52,
         "w": 12,
         "h": 8
       },
@@ -789,7 +941,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 44,
+        "y": 60,
         "w": 24,
         "h": 8
       },
@@ -816,26 +968,160 @@
                 "value": null
               }
             ]
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
           }
         },
         "overrides": []
       },
       "options": {
-        "showHeader": true
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Node",
+            "desc": false
+          }
+        ]
       },
       "transformations": [
         {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "node",
+                "device",
+                "model_name",
+                "serial_number",
+                "firmware_version",
+                "protocol",
+                "form_factor"
+              ]
+            }
+          }
+        },
+        {
           "id": "organize",
           "options": {
-            "excludeByName": {
-              "Time": true,
-              "Value": true,
-              "instance": true,
-              "job": true,
-              "namespace": true,
-              "pod": true,
-              "endpoint": true,
-              "service": true
+            "indexByName": {
+              "node": 0,
+              "device": 1,
+              "model_name": 2,
+              "serial_number": 3,
+              "firmware_version": 4,
+              "protocol": 5,
+              "form_factor": 6
+            },
+            "renameByName": {
+              "node": "Node",
+              "device": "Disk",
+              "model_name": "Model",
+              "serial_number": "Serial",
+              "firmware_version": "Firmware",
+              "protocol": "Protocol",
+              "form_factor": "Form factor"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "title": "SATA raw SMART attributes",
+      "description": "Device-reported raw values. Meanings and units are vendor-specific; unknown or packed values are not interpreted as generic error counts or life percentages.",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${datasource}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 68,
+        "w": 24,
+        "h": 10
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "smartctl_device_attribute{namespace=\"monitoring\",node=~\"$node\",device=~\"$device\",attribute_value_type=\"raw\"}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "No data",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "filterable": true
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "sortBy": [
+          {
+            "displayName": "Node",
+            "desc": false
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "filterFieldsByName",
+          "options": {
+            "include": {
+              "names": [
+                "node",
+                "device",
+                "attribute_id",
+                "attribute_name",
+                "Value"
+              ]
+            }
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "indexByName": {
+              "node": 0,
+              "device": 1,
+              "attribute_id": 2,
+              "attribute_name": 3,
+              "Value": 4
+            },
+            "renameByName": {
+              "node": "Node",
+              "device": "Disk",
+              "attribute_id": "Attribute ID",
+              "attribute_name": "Attribute",
+              "Value": "Raw value"
             }
           }
         }

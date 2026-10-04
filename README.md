@@ -76,6 +76,14 @@ for ConfigMap-based dashboard provisioning.
 
 ### SSD health
 
+The SMART / Health information table presents one row per field and one column
+per selected disk, similar to `smartctl` output. Missing or unexported values
+display Unavailable, never zero. NVMe data units and decimal TB are derived from
+exported byte counters. The v0.14.0 exporter does not expose host command counts,
+controller busy time, temperature durations or individual NVMe sensor readings;
+those rows stay unavailable. SATA vendor raw attributes remain separate from
+NVMe endurance percentage.
+
 `Infra/ssd-health.json` uses smartctl_exporter metrics collected by the
 `homelab-ops` SMART monitoring application. It provides node/device filters,
 SMART status, telemetry availability, temperature, power-on time, SATA sector
